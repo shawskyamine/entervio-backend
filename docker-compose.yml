@@ -1,0 +1,21 @@
+﻿services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: entrevio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: entrevio
+      POSTGRES_USER: entrevio
+      POSTGRES_PASSWORD: entrevio
+    ports:
+      - "5433:5432"
+    volumes:
+      - entrevio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U entrevio -d entrevio"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  entrevio_pgdata:
