@@ -20,5 +20,6 @@ public class UpdateCompanyRequest {
     @Size(max = 255)
     private String website;
 
+    @Size(max = 2000)
     private String description;
 }

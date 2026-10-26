@@ -1,43 +1,63 @@
 package com.entrevio.entrevio_backend.controller;
 
 import com.entrevio.entrevio_backend.dto.ApiResponse;
-import com.entrevio.entrevio_backend.model.User;
-import com.entrevio.entrevio_backend.repository.CvRepository;
-import com.entrevio.entrevio_backend.security.CurrentUser;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.entrevio.entrevio_backend.dto.dashboard.PipelineDto;
+import com.entrevio.entrevio_backend.dto.dashboard.RecruiterStatsDto;
+import com.entrevio.entrevio_backend.dto.dashboard.TimelinePointDto;
+import com.entrevio.entrevio_backend.dto.dashboard.TopJobDto;
+import com.entrevio.entrevio_backend.service.DashboardService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
 public class DashboardController {
 
-    private final CvRepository cvRepository;
+    private final DashboardService dashboardService;
 
-    public DashboardController(CvRepository cvRepository) {
-        this.cvRepository = cvRepository;
+    public DashboardController(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
     }
 
-    @GetMapping("/candidate/summary")
-    public ApiResponse<Map<String, Object>> candidateSummary() {
-        User me = CurrentUser.get();
-        boolean cvUploaded = cvRepository.existsByUserId(me.getId());
-        return ApiResponse.ok(Map.of(
-                "applicationsCount", 0,
-                "interviewsCount",   0,
-                "cvUploaded",        cvUploaded
-        ));
+    @GetMapping("/recruiter/stats")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<ApiResponse<RecruiterStatsDto>> getStats() {
+        return ResponseEntity.ok(ApiResponse.ok(dashboardService.getRecruiterStats()));
+    }
+
+    @GetMapping("/recruiter/timeline")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<ApiResponse<List<TimelinePointDto>>> getTimeline(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(ApiResponse.ok(dashboardService.getTimeline(days)));
+    }
+
+    @GetMapping("/recruiter/pipeline")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<ApiResponse<PipelineDto>> getPipeline() {
+        return ResponseEntity.ok(ApiResponse.ok(dashboardService.getPipeline()));
+    }
+
+    @GetMapping("/recruiter/top-jobs")
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<ApiResponse<List<TopJobDto>>> getTopJobs(
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(ApiResponse.ok(dashboardService.getTopJobs(limit)));
     }
 
     @GetMapping("/recruiter/summary")
-    public ApiResponse<Map<String, Object>> recruiterSummary() {
-        return ApiResponse.ok(Map.of(
-                "activeJobsCount",   0,
-                "applicantsCount",   0,
-                "interviewsCount",   0,
-                "matchesReadyCount", 0
-        ));
+    @PreAuthorize("hasRole('RECRUITER')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSummary() {
+        var stats = dashboardService.getRecruiterStats();
+        return ResponseEntity.ok(ApiResponse.ok(Map.of(
+                "activeJobsCount",   stats.getActiveJobs(),
+                "applicantsCount",   stats.getTotalApplications(),
+                "interviewsCount",   stats.getInterviewsCount(),
+                "matchesReadyCount", stats.getAcceptedCount()
+        )));
     }
 }
